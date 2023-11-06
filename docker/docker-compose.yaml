@@ -9,7 +9,7 @@ services:
      volumes:
        - ./nginx.conf:/etc/nginx/nginx.conf:ro
   elga-ohif:
-     image: elgagmbh/elga-ohif3
+     image: elgagmbh/drive:latest
      expose:
        - 80:80
      environment:
