@@ -9,16 +9,18 @@ import RetrieveMetadataLoader from './retrieveMetadataLoader';
  * @param {Array} seriesInstanceUIDList A list of Series Instance UIDs
  * @returns {Object} Returns an object which supports loading of instances from each of given Series Instance UID
  */
-function makeSeriesAsyncLoader(client, studyInstanceUID, seriesInstanceUIDList) {
+function makeSeriesAsyncLoader(client, studyInstanceUID, seriesInstanceUIDList, patientId) {
   return Object.freeze({
     hasNext() {
       return seriesInstanceUIDList.length > 0;
     },
     async next() {
+      console.log('MyLog, RetrieveMetadata next', client);
       const seriesInstanceUID = seriesInstanceUIDList.shift();
       return client.retrieveSeriesMetadata({
         studyInstanceUID,
         seriesInstanceUID,
+        patientId,
       });
     },
   });
@@ -37,16 +39,31 @@ export default class RetrieveMetadataLoaderAsync extends RetrieveMetadataLoader 
   *getPreLoaders() {
     const preLoaders = [];
     const { studyInstanceUID, filters: { seriesInstanceUID } = {}, client } = this;
-
+    console.log('MyLog, RetrieveMetadata - getPreLoaders', this.filters, client);
     if (seriesInstanceUID) {
+      console.log(
+        'MyLog, RetrieveMetadata - getPreLoaders setseriesInstanceUID',
+        seriesInstanceUID,
+        this.filters
+      );
       const options = {
         studyInstanceUID,
-        queryParams: { SeriesInstanceUID: seriesInstanceUID },
+        queryParams: { SeriesInstanceUID: seriesInstanceUID, ...this.filters },
       };
       preLoaders.push(client.searchForSeries.bind(client, options));
     }
+    if (this.filters.hasOwnProperty('token')) {
+      delete this.filters.token;
+    }
+    if (this.filters.hasOwnProperty('hcp')) {
+      delete this.filters.hcp;
+    }
+    const options = {
+      studyInstanceUID,
+      queryParams: this.filters,
+    };
     // Fallback preloader
-    preLoaders.push(client.searchForSeries.bind(client, { studyInstanceUID }));
+    preLoaders.push(client.searchForSeries.bind(client, options));
 
     yield* preLoaders;
   }
@@ -71,8 +88,21 @@ export default class RetrieveMetadataLoaderAsync extends RetrieveMetadataLoader 
     const { client, studyInstanceUID } = this;
 
     const seriesInstanceUIDs = preLoadData.map(s => s.SeriesInstanceUID);
-
-    const seriesAsyncLoader = makeSeriesAsyncLoader(client, studyInstanceUID, seriesInstanceUIDs);
+    const WADORetrieveURLs = preLoadData.map(x =>
+      x.RetrieveURL.replace(/\/studies\/[0-9\.]{1,}.*/gm, '')
+    );
+    console.log('MyLog, RetrieveMetadata, Load', preLoadData, client, WADORetrieveURLs);
+    // const patientId = preLoadData && preLoadData.length > 0 ? preLoadData[0].PatientID : null;
+    // console.log('MyLog, RetrieveMetadata, Load', patientId);
+    client.baseURL = WADORetrieveURLs[0];
+    client.wadoURL = WADORetrieveURLs[0];
+    const seriesAsyncLoader = makeSeriesAsyncLoader(
+      client,
+      studyInstanceUID,
+      seriesInstanceUIDs,
+      0
+    );
+    console.log('MyLog, RetrieveMetadata, seriesAsyncLoader', seriesAsyncLoader);
 
     const promises = [];
 

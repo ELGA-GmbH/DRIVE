@@ -149,8 +149,10 @@ class ImageOverlayViewerTool extends AnnotationDisplayTool {
         .map(async (overlay, idx) => {
           let pixelData = null;
           if (overlay.pixelData.Value) {
+            console.log('MyLog, retrieveBulkData, false');
             pixelData = overlay.pixelData.Value;
           } else if (overlay.pixelData.retrieveBulkData) {
+            console.log('MyLog, retrieveBulkData, true');
             pixelData = await overlay.pixelData.retrieveBulkData();
           }
 

@@ -35,7 +35,10 @@ function createDicomWebProxyApi(dicomWebProxyConfig, UserAuthenticationService) 
     },
     query: {
       studies: {
-        search: params => dicomWebDelegate.query.studies.search(params),
+        search: params => {
+          console.log('WebProxy');
+          return dicomWebDelegate.query.studies.search(params);
+        },
       },
       series: {
         search: (...args) => dicomWebDelegate.query.series.search(...args),
@@ -57,6 +60,16 @@ function createDicomWebProxyApi(dicomWebProxyConfig, UserAuthenticationService) 
     deleteStudyMetadataPromise: (...args) => dicomWebDelegate.deleteStudyMetadataPromise(...args),
     getImageIdsForDisplaySet: (...args) => dicomWebDelegate.getImageIdsForDisplaySet(...args),
     getImageIdsForInstance: (...args) => dicomWebDelegate.getImageIdsForInstance(...args),
+    getPatientId({ query }) {
+      try {
+        console.log('MyLog,getPatientId', query);
+        const AccessionNumber = query.getAll('AccessionNumber');
+        return AccessionNumber;
+      } catch (ex) {
+        console.log('MyLog', ex);
+      }
+      return null;
+    },
     getStudyInstanceUIDs({ params, query }) {
       let studyInstanceUIDs = [];
 

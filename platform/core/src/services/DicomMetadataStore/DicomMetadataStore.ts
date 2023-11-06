@@ -133,6 +133,7 @@ const BaseImplementation = {
   EVENTS,
   listeners: {},
   addInstance(dicomJSONDatasetOrP10ArrayBuffer) {
+    console.log('MyLog addInstance', dicomJSONDatasetOrP10ArrayBuffer);
     let dicomJSONDataset;
 
     // If Arraybuffer, parse to DICOMJSON before naturalizing.

@@ -1,0 +1,20 @@
+version: "3.7"
+name: elga-ohif-and-proxy
+services:
+  elga-nginx:
+     image: nginx:latest
+     container_name: nginx-container
+     ports:
+       - "80:80"
+     volumes:
+       - ./nginx.conf:/etc/nginx/nginx.conf:ro
+  elga-ohif:
+     image: elgagmbh/elga-ohif3
+     expose:
+       - 80:80
+     environment:
+       - APP_CONFIG:/usr/share/nginx/html/app-config.js
+     volumes:
+       - ./ohif.js:/usr/share/nginx/html/app-config.js:ro
+       - ./logo.png:/usr/share/nginx/html/logo.png:ro
+     restart: always

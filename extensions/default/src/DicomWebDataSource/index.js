@@ -51,6 +51,7 @@ function createDicomWebApi(dicomWebConfig, userAuthenticationService) {
 
   const implementation = {
     initialize: ({ params, query }) => {
+      console.log('MyLog, createDicomWebApi', dicomWebConfigCopy, window.location.search);
       if (dicomWebConfig.onConfiguration && typeof dicomWebConfig.onConfiguration === 'function') {
         dicomWebConfig = dicomWebConfig.onConfiguration(dicomWebConfig, {
           params,
@@ -71,13 +72,13 @@ function createDicomWebApi(dicomWebConfig, userAuthenticationService) {
 
       generateWadoHeader = () => {
         let authorizationHeader = getAuthrorizationHeader();
+
         //Generate accept header depending on config params
         let formattedAcceptHeader = utils.generateAcceptHeader(
           dicomWebConfig.acceptHeader,
           dicomWebConfig.requestTransferSyntaxUID,
           dicomWebConfig.omitQuotationForMultipartRequest
         );
-
         return {
           ...authorizationHeader,
           Accept: formattedAcceptHeader,
@@ -99,7 +100,12 @@ function createDicomWebApi(dicomWebConfig, userAuthenticationService) {
         headers: userAuthenticationService.getAuthorizationHeader(),
         errorInterceptor: errorHandler.getHTTPErrorHandler(),
       };
-
+      console.log(
+        'MyLog, dicomWebDataSource, WADO',
+        wadoConfig,
+        qidoConfig,
+        window.location.search
+      );
       // TODO -> Two clients sucks, but its better than 1000.
       // TODO -> We'll need to merge auth later.
       qidoDicomWebClient = dicomWebConfig.staticWado
@@ -114,23 +120,39 @@ function createDicomWebApi(dicomWebConfig, userAuthenticationService) {
       studies: {
         mapParams: mapParams.bind(),
         search: async function (origParams) {
-          qidoDicomWebClient.headers = getAuthrorizationHeader();
+          const authHeader = getAuthrorizationHeader();
+
+          console.log('MyLog Search query', origParams);
+          qidoDicomWebClient.headers = authHeader;
+
           const { studyInstanceUid, seriesInstanceUid, ...mappedParams } =
             mapParams(origParams, {
               supportsFuzzyMatching: dicomWebConfig.supportsFuzzyMatching,
               supportsWildcard: dicomWebConfig.supportsWildcard,
             }) || {};
+          console.log('MyLog Search query', mappedParams);
 
           const results = await qidoSearch(qidoDicomWebClient, undefined, undefined, mappedParams);
 
-          return processResults(results);
+          const proc = processResults(results);
+          console.log('MyLog Search query results', proc);
+
+          wadoConfig.url = proc.map(x => x.retrieveURL.replace(/studies\/[0-9\.]{1,}.*/gm, ''))[0];
+          return proc;
         },
         processResults: processResults.bind(),
       },
       series: {
+        mapParams: mapParams.bind(),
         // mapParams: mapParams.bind(),
-        search: async function (studyInstanceUid) {
-          qidoDicomWebClient.headers = getAuthrorizationHeader();
+        search: async function (studyInstanceUid, origParams) {
+          const authHeader = getAuthrorizationHeader();
+          console.log('MyLog, Search Series query', origParams, authHeader);
+          const { ...mappedParams } =
+            mapParams(origParams, {
+              supportsFuzzyMatching: dicomWebConfig.supportsFuzzyMatching,
+              supportsWildcard: dicomWebConfig.supportsWildcard,
+            }) || {};
           const results = await seriesInStudy(qidoDicomWebClient, studyInstanceUid);
 
           return processSeriesResults(results);
@@ -185,10 +207,10 @@ function createDicomWebApi(dicomWebConfig, userAuthenticationService) {
           sortFunction,
           madeInClient = false,
         } = {}) => {
+          console.log('MyLog, RetrieveMetadata DicomWeb Datasource gtet data, filters', filters);
           if (!StudyInstanceUID) {
             throw new Error('Unable to query for SeriesMetadata without StudyInstanceUID');
           }
-
           if (dicomWebConfig.enableStudyLazyLoad) {
             return implementation._retrieveSeriesMetadataAsync(
               StudyInstanceUID,
@@ -212,12 +234,14 @@ function createDicomWebApi(dicomWebConfig, userAuthenticationService) {
 
     store: {
       dicom: async (dataset, request) => {
+        console.log('MyLog, store', dataset, request);
         wadoDicomWebClient.headers = getAuthrorizationHeader();
         if (dataset instanceof ArrayBuffer) {
           const options = {
             datasets: [dataset],
             request,
           };
+          console.log('MyLog, store', options);
           await wadoDicomWebClient.storeInstances(options);
         } else {
           const meta = {
@@ -240,7 +264,7 @@ function createDicomWebApi(dicomWebConfig, userAuthenticationService) {
             datasets: [part10Buffer],
             request,
           };
-
+          console.log('MyLog, store', options);
           await wadoDicomWebClient.storeInstances(options);
         }
       },
@@ -256,6 +280,7 @@ function createDicomWebApi(dicomWebConfig, userAuthenticationService) {
       const enableStudyLazyLoad = false;
       wadoDicomWebClient.headers = generateWadoHeader();
       // data is all SOPInstanceUIDs
+      console.log('MyLog, WAdo _retrieveSeriesMetadataSync', wadoDicomWebClient);
       const data = await retrieveStudyMetadata(
         wadoDicomWebClient,
         StudyInstanceUID,
@@ -312,6 +337,7 @@ function createDicomWebApi(dicomWebConfig, userAuthenticationService) {
       Object.keys(instancesPerSeries).forEach(seriesInstanceUID =>
         DicomMetadataStore.addInstances(instancesPerSeries[seriesInstanceUID], madeInClient)
       );
+      console.log('MyLog, Wado seriesMetadata', seriesMetadata);
     },
 
     _retrieveSeriesMetadataAsync: async (
@@ -323,7 +349,11 @@ function createDicomWebApi(dicomWebConfig, userAuthenticationService) {
     ) => {
       const enableStudyLazyLoad = true;
       wadoDicomWebClient.headers = generateWadoHeader();
+      wadoDicomWebClient.qidoURL = qidoConfig.url;
+      wadoDicomWebClient.wadoURL = wadoConfig.url;
+      wadoDicomWebClient.baseURL = wadoConfig.url;
       // Get Series
+      console.log('MyLog, Wado _retrieveSeriesMetadataAsync', wadoDicomWebClient);
       const { preLoadData: seriesSummaryMetadata, promises: seriesPromises } =
         await retrieveStudyMetadata(
           wadoDicomWebClient,
@@ -333,7 +363,7 @@ function createDicomWebApi(dicomWebConfig, userAuthenticationService) {
           sortCriteria,
           sortFunction
         );
-
+      // console.log('MyLog, Wado _retrieveSeriesMetadataAsync', seriesSummaryMetadata);
       /**
        * naturalizes the dataset, and adds a retrieve bulkdata method
        * to any values containing BulkDataURI.
@@ -342,6 +372,12 @@ function createDicomWebApi(dicomWebConfig, userAuthenticationService) {
        */
       const addRetrieveBulkData = instance => {
         const naturalized = naturalizeDataset(instance);
+        // console.log(
+        //   'MyLog, Wado _retrieveSeriesMetadataAsync,addRetrieveBulkData',
+        //   naturalized,
+        //   instance,
+        //   dicomWebConfig.bulkDataURI?.enabled
+        // );
 
         // if we know the server doesn't use bulkDataURI, then don't
         if (!dicomWebConfig.bulkDataURI?.enabled) {
@@ -350,7 +386,11 @@ function createDicomWebApi(dicomWebConfig, userAuthenticationService) {
 
         Object.keys(naturalized).forEach(key => {
           const value = naturalized[key];
-
+          // console.log(
+          //   'MyLog, Wado _retrieveSeriesMetadataAsync,addRetrieveBulkData',
+          //   value,
+          //   value && value.BulkDataURI && !value.Value
+          // );
           // The value.Value will be set with the bulkdata read value
           // in which case it isn't necessary to re-read this.
           if (value && value.BulkDataURI && !value.Value) {
@@ -371,6 +411,7 @@ function createDicomWebApi(dicomWebConfig, userAuthenticationService) {
                 // any implementation that stores static copies of the metadata
                 StudyInstanceUID: naturalized.StudyInstanceUID,
               };
+
               // Todo: this needs to be from wado dicom web client
               return qidoDicomWebClient.retrieveBulkData(options).then(val => {
                 // There are DICOM PDF cases where the first ArrayBuffer in the array is
@@ -390,10 +431,12 @@ function createDicomWebApi(dicomWebConfig, userAuthenticationService) {
 
       // Async load series, store as retrieved
       function storeInstances(instances) {
+        console.log('MyLog, Wado _retrieveSeriesMetadataAsync', instances);
         const naturalizedInstances = instances.map(addRetrieveBulkData);
 
         // Adding instanceMetadata to OHIF MetadataProvider
         naturalizedInstances.forEach((instance, index) => {
+          console.log('MyLog , naturalizedInstances,', instance, dicomWebConfig.wadoRoot);
           instance.wadoRoot = dicomWebConfig.wadoRoot;
           instance.wadoUri = dicomWebConfig.wadoUri;
 
@@ -409,6 +452,8 @@ function createDicomWebApi(dicomWebConfig, userAuthenticationService) {
           // Adding UIDs to metadataProvider
           // Note: storing imageURI in metadataProvider since stack viewports
           // will use the same imageURI
+          console.log('MyLog , naturalizedInstances,metadataProvider', metadataProvider);
+
           metadataProvider.addImageIdToUIDs(imageId, {
             StudyInstanceUID,
             SeriesInstanceUID: instance.SeriesInstanceUID,
@@ -420,6 +465,7 @@ function createDicomWebApi(dicomWebConfig, userAuthenticationService) {
       }
 
       function setSuccessFlag() {
+        console.log('MyLog, Wado _retrieveSeriesMetadataAsync,setSuccessFlag');
         const study = DicomMetadataStore.getStudy(StudyInstanceUID, madeInClient);
         study.isLoaded = true;
       }
@@ -434,6 +480,7 @@ function createDicomWebApi(dicomWebConfig, userAuthenticationService) {
 
       const seriesDeliveredPromises = seriesPromises.map(promise =>
         promise.then(instances => {
+          console.log('MyLog, Wado _retrieveSeriesMetadataAsync,seriesDeliveredPromises');
           storeInstances(instances);
         })
       );
@@ -442,6 +489,7 @@ function createDicomWebApi(dicomWebConfig, userAuthenticationService) {
     },
     deleteStudyMetadataPromise,
     getImageIdsForDisplaySet(displaySet) {
+      console.log('MyLog, Wado _retrieveSeriesMetadataAsync,getImageIdsForDisplaySet', displaySet);
       const images = displaySet.images;
       const imageIds = [];
 
@@ -450,6 +498,7 @@ function createDicomWebApi(dicomWebConfig, userAuthenticationService) {
       }
 
       displaySet.images.forEach(instance => {
+        console.log('MyLog, Wado _retrieveSeriesMetadataAsync, displaySet.images', instance);
         const NumberOfFrames = instance.NumberOfFrames;
 
         if (NumberOfFrames > 1) {
@@ -469,6 +518,7 @@ function createDicomWebApi(dicomWebConfig, userAuthenticationService) {
       return imageIds;
     },
     getImageIdsForInstance({ instance, frame }) {
+      console.log('MyLog, Wado _retrieveSeriesMetadataAsync, getImageIdsForInstance');
       const imageIds = getImageId({
         instance,
         frame,
@@ -479,7 +529,18 @@ function createDicomWebApi(dicomWebConfig, userAuthenticationService) {
     getConfig() {
       return dicomWebConfigCopy;
     },
+    getPatientId({ query }) {
+      try {
+        console.log('MyLog', query);
+        const PatientId = query.getAll('PatientID');
+        return PatientId;
+      } catch (ex) {
+        console.error('MyLog', ex);
+      }
+      return null;
+    },
     getStudyInstanceUIDs({ params, query }) {
+      console.log('MyLog/getStudyInstanceUIDs');
       const { StudyInstanceUIDs: paramsStudyInstanceUIDs } = params;
       const queryStudyInstanceUIDs = utils.splitComma(query.getAll('StudyInstanceUIDs'));
 

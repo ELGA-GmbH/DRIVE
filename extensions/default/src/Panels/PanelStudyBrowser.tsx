@@ -24,7 +24,9 @@ function PanelStudyBrowser({
   // Normally you nest the components so the tree isn't so deep, and the data
   // doesn't have to have such an intense shape. This works well enough for now.
   // Tabs --> Studies --> DisplaySets --> Thumbnails
-  const { StudyInstanceUIDs } = useImageViewer();
+  console.log('MyLog, PanelStudyBrowser');
+  const { StudyInstanceUIDs, PatientID } = useImageViewer();
+  console.log('MyLog, PanelStudyBrowser', StudyInstanceUIDs, PatientID);
   const [{ activeViewportId, viewports }, viewportGridService] = useViewportGrid();
   const [activeTabName, setActiveTabName] = useState('primary');
   const [expandedStudyInstanceUIDs, setExpandedStudyInstanceUIDs] = useState([
@@ -60,6 +62,7 @@ function PanelStudyBrowser({
   useEffect(() => {
     // Fetch all studies for the patient in each primary study
     async function fetchStudiesForPatient(StudyInstanceUID) {
+      console.log('MyLog, fetchStudiesForPatient', StudyInstanceUID);
       // current study qido
       const qidoForStudyUID = await dataSource.query.studies.search({
         studyInstanceUid: StudyInstanceUID,
@@ -71,7 +74,7 @@ function PanelStudyBrowser({
       }
 
       let qidoStudiesForPatient = qidoForStudyUID;
-
+      console.log('MyLog, fetchStudiesForPatient qidoForStudyUID', qidoForStudyUID);
       // try to fetch the prior studies based on the patientID if the
       // server can respond.
       try {
@@ -79,8 +82,9 @@ function PanelStudyBrowser({
       } catch (error) {
         console.warn(error);
       }
-
+      console.log('MyLog, fetchStudiesForPatient qidoStudiesForPatient', qidoStudiesForPatient);
       const mappedStudies = _mapDataSourceStudies(qidoStudiesForPatient);
+      console.log('MyLog, fetchStudiesForPatient mappedStudies', mappedStudies);
       const actuallyMappedStudies = mappedStudies.map(qidoStudy => {
         return {
           studyInstanceUid: qidoStudy.StudyInstanceUID,
@@ -90,7 +94,7 @@ function PanelStudyBrowser({
           numInstances: qidoStudy.NumInstances,
         };
       });
-
+      console.log('MyLog, fetchStudiesForPatient actuallyMappedStudies', actuallyMappedStudies);
       setStudyDisplayList(prevArray => {
         const ret = [...prevArray];
         for (const study of actuallyMappedStudies) {
@@ -104,7 +108,7 @@ function PanelStudyBrowser({
 
     StudyInstanceUIDs.forEach(sid => fetchStudiesForPatient(sid));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [StudyInstanceUIDs, getStudiesForPatientByMRN]);
+  }, [StudyInstanceUIDs, PatientID, getStudiesForPatientByMRN]);
 
   // // ~~ Initial Thumbnails
   useEffect(() => {
@@ -212,7 +216,7 @@ function PanelStudyBrowser({
     const shouldCollapseStudy = expandedStudyInstanceUIDs.includes(StudyInstanceUID);
     const updatedExpandedStudyInstanceUIDs = shouldCollapseStudy
       ? // eslint-disable-next-line prettier/prettier
-        [...expandedStudyInstanceUIDs.filter(stdyUid => stdyUid !== StudyInstanceUID)]
+      [...expandedStudyInstanceUIDs.filter(stdyUid => stdyUid !== StudyInstanceUID)]
       : [...expandedStudyInstanceUIDs, StudyInstanceUID];
 
     setExpandedStudyInstanceUIDs(updatedExpandedStudyInstanceUIDs);
@@ -267,7 +271,7 @@ function _mapDataSourceStudies(studies) {
       StudyDescription: study.description,
       NumInstances: study.instances,
       ModalitiesInStudy: study.modalities,
-      PatientID: study.mrn,
+      PatientID: study.patientId,
       PatientName: study.patientName,
       StudyInstanceUID: study.studyInstanceUid,
       StudyTime: study.time,
@@ -287,7 +291,7 @@ function _mapDisplaySets(displaySets, thumbnailImageSrcMap) {
 
       const array =
         componentType === 'thumbnail' ? thumbnailDisplaySets : thumbnailNoImageDisplaySets;
-
+      console.log('MyLog, Displaysets PanelStudybrowser', ds);
       array.push({
         displaySetInstanceUID: ds.displaySetInstanceUID,
         description: ds.SeriesDescription || '',
@@ -340,7 +344,7 @@ function _createStudyBrowserTabs(primaryStudyInstanceUIDs, studyDisplayList, dis
   const primaryStudies = [];
   const recentStudies = [];
   const allStudies = [];
-
+  console.log('MyLog create studyBrosertabs', displaySets);
   studyDisplayList.forEach(study => {
     const displaySetsForStudy = displaySets.filter(
       ds => ds.StudyInstanceUID === study.studyInstanceUid
@@ -363,16 +367,6 @@ function _createStudyBrowserTabs(primaryStudyInstanceUIDs, studyDisplayList, dis
       name: 'primary',
       label: 'Primary',
       studies: primaryStudies,
-    },
-    {
-      name: 'recent',
-      label: 'Recent',
-      studies: recentStudies,
-    },
-    {
-      name: 'all',
-      label: 'All',
-      studies: allStudies,
     },
   ];
 

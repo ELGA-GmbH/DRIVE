@@ -19,6 +19,7 @@ async function RetrieveMetadata(
   sortCriteria,
   sortFunction
 ) {
+  console.log('MyLog, RetrieveMetadata', enableStudyLazyLoad, filters, studyInstanceUid);
   const RetrieveMetadataLoader =
     enableStudyLazyLoad !== false ? RetrieveMetadataLoaderAsync : RetrieveMetadataLoaderSync;
 

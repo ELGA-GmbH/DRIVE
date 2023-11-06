@@ -26,12 +26,15 @@ export function retrieveStudyMetadata(
   // @TODO: Whenever a study metadata request has failed, its related promise will be rejected once and for all
   // and further requests for that metadata will always fail. On failure, we probably need to remove the
   // corresponding promise from the "StudyMetaDataPromises" map...
-
+  console.log('MyLog, RetrieveMetadata - retrieveStudyMetadata  - Send Request', filters);
   if (!dicomWebClient) {
     throw new Error(`${moduleName}: Required 'dicomWebClient' parameter not provided.`);
   }
   if (!StudyInstanceUID) {
     throw new Error(`${moduleName}: Required 'StudyInstanceUID' parameter not provided.`);
+  }
+  if (!Object.keys(filters).some(x => x.toLowerCase() == 'patientid')) {
+    throw new Error(`${moduleName}: Required 'PatientId' parameter not provided.`);
   }
 
   // Already waiting on result? Return cached promise

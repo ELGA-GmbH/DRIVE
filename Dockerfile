@@ -74,6 +74,7 @@ COPY --from=builder /usr/src/app/platform/app/dist /usr/share/nginx/html
 # The nginx user cannot chmod it, so change to root.
 USER root
 RUN chmod 666 /usr/share/nginx/html/app-config.js
+COPY nginx.conf /etc/nginx/nginx.conf
 USER nginx
 ENTRYPOINT ["/usr/src/entrypoint.sh"]
 CMD ["nginx", "-g", "daemon off;"]

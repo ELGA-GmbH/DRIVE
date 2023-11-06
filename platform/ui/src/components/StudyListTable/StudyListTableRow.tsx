@@ -56,7 +56,7 @@ const StudyListTableRow = props => {
                         title={title}
                       >
                         <div className="flex">
-                          {index === 0 && (
+                          {index === 0 && expandedContent != null && (
                             <div>
                               <Icon
                                 name={isExpanded ? 'chevron-down' : 'chevron-right'}

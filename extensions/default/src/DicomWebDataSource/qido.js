@@ -48,12 +48,17 @@ function processResults(qidoStudies) {
     studies.push({
       studyInstanceUid: getString(qidoStudy['0020000D']),
       date: getString(qidoStudy['00080020']), // YYYYMMDD
+      retrieveURL: getString(qidoStudy['00081190']), // YYYYMMDD
       time: getString(qidoStudy['00080030']), // HHmmss.SSS (24-hour, minutes, seconds, fractional seconds)
       accession: getString(qidoStudy['00080050']) || '', // short string, probably a number?
-      mrn: getString(qidoStudy['00100020']) || '', // medicalRecordNumber
+      issuerofaccession: getString(qidoStudy['00080051']) || '',
+      patientId: getString(qidoStudy['00100020']) || '', // medicalRecordNumber
+      issuerOfPatientId: getString(qidoStudy['00100021']) || '', // medicalRecordNumber
       patientName: utils.formatPN(getName(qidoStudy['00100010'])) || '',
       instances: Number(getString(qidoStudy['00201208'])) || 0, // number
       description: getString(qidoStudy['00081030']) || '',
+      performingPhysicians: getString(qidoStudy['00081050']) || '',
+      institution: getString(qidoStudy['00080080']) || '',
       modalities: getString(getModalities(qidoStudy['00080060'], qidoStudy['00080061'])) || '',
     })
   );
@@ -79,10 +84,13 @@ export function processSeriesResults(qidoSeries) {
       series.push({
         studyInstanceUid: getString(qidoSeries['0020000D']),
         seriesInstanceUid: getString(qidoSeries['0020000E']),
+        retrieveURL: getString(qidoSeries['00081190']),
         modality: getString(qidoSeries['00080060']),
         seriesNumber: getString(qidoSeries['00200011']),
         seriesDate: utils.formatDate(getString(qidoSeries['00080021'])),
         numSeriesInstances: Number(getString(qidoSeries['00201209'])),
+        performingPhysicians: getString(qidoSeries['00081050']) || '',
+        institution: getString(qidoSeries['00080080']) || '',
         description: getString(qidoSeries['0008103E']),
       })
     );
@@ -99,10 +107,17 @@ export function processSeriesResults(qidoSeries) {
  * @param {function} dicomWebClient.searchForStudies -
  * @param {string} [studyInstanceUid]
  * @param {string} [seriesInstanceUid]
- * @param {string} [queryParamaters]
+ * @param {string} [queryParameters]
  * @returns {Promise<results>} - Promise that resolves results
  */
 async function search(dicomWebClient, studyInstanceUid, seriesInstanceUid, queryParameters) {
+  console.log('MyLog, Search', {
+    dicomWebClient,
+    studyInstanceUid,
+    seriesInstanceUid,
+    queryParameters,
+  });
+
   let searchResult = await dicomWebClient.searchForStudies({
     studyInstanceUid: undefined,
     queryParams: queryParameters,
@@ -116,19 +131,23 @@ async function search(dicomWebClient, studyInstanceUid, seriesInstanceUid, query
  * @param {string} studyInstanceUID - ID of study to return a list of series for
  * @returns {Promise} - Resolves SeriesMetadata[] in study
  */
-export function seriesInStudy(dicomWebClient, studyInstanceUID) {
+export function seriesInStudy(dicomWebClient, studyInstanceUID, queryParameters) {
+  console.log('MyLog ,seriesInStudy', studyInstanceUID, dicomWebClient, queryParameters);
   // Series Description
   // Already included?
   const commaSeparatedFields = ['0008103E', '00080021'].join(',');
   const queryParams = {
     includefield: commaSeparatedFields,
+    ...queryParameters,
   };
 
   return dicomWebClient.searchForSeries({ studyInstanceUID, queryParams });
 }
 
 export default function searchStudies(server, filter) {
+  console.log('MyLog ,searchStudies', filter);
   const queryParams = getQIDOQueryParams(filter, server.qidoSupportsIncludeField);
+
   const options = {
     queryParams,
   };
@@ -145,12 +164,14 @@ export default function searchStudies(server, filter) {
  * @returns {string} The URL with encoded filter query data
  */
 function mapParams(params, options = {}) {
+  console.log('MyLog, mapParams', params, options);
   if (!params) {
     return;
   }
   const commaSeparatedFields = [
     '00081030', // Study Description
     '00080060', // Modality
+    '00081190',
     // Add more fields here if you want them in the result
   ].join(',');
 
@@ -162,9 +183,12 @@ function mapParams(params, options = {}) {
   const parameters = {
     // Named
     PatientName: withWildcard(params.patientName),
-    //PatientID: withWildcard(params.patientId),
+    PatientID: withWildcard(params.patientId),
+    IssuerOfPatientID: withWildcard(params.issuerOfPatientId),
+    hcp: params.hcp,
     '00100020': withWildcard(params.patientId), // Temporarily to make the tests pass with dicomweb-server.. Apparently it's broken?
     AccessionNumber: withWildcard(params.accessionNumber),
+    IssuerOfAccessionNumber: withWildcard(params.issuerOfAccessionNumber),
     StudyDescription: withWildcard(params.studyDescription),
     ModalitiesInStudy: params.modalitiesInStudy,
     // Other
@@ -207,6 +231,7 @@ function mapParams(params, options = {}) {
     }
   });
 
+  console.log('MyLog, final', final);
   return final;
 }
 

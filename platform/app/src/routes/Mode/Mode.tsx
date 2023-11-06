@@ -25,9 +25,11 @@ const { getSplitParam } = utils;
  * @returns array of subscriptions to cancel
  */
 function defaultRouteInit(
-  { servicesManager, studyInstanceUIDs, dataSource, filters },
+  { servicesManager, studyInstanceUIDs, patientId, dataSource, filters },
   hangingProtocolId
 ) {
+  console.log('MyLog defaultRouteInit', filters);
+
   const { displaySetService, hangingProtocolService, uiNotificationService } =
     servicesManager.services;
 
@@ -59,44 +61,56 @@ function defaultRouteInit(
   );
 
   unsubscriptions.push(instanceAddedUnsubscribe);
+  console.log('MyLog, filters', Object.keys(filters));
+  if (Object.keys(filters).indexOf('PatientID') >= 0) {
+    console.log('MyLog, RETRIEVE, filters', Object.keys(filters));
 
-  const allRetrieves = studyInstanceUIDs.map(StudyInstanceUID =>
-    dataSource.retrieve.series.metadata({
-      StudyInstanceUID,
-      filters,
-    })
-  );
-
-  // log the error if this fails, otherwise it's so difficult to tell what went wrong...
-  allRetrieves.forEach(retrieve => {
-    retrieve.catch(error => {
-      console.error(error);
+    const allRetrieves = studyInstanceUIDs.map(StudyInstanceUID =>
+      // dataSource.query.series.search({
+      //   StudyInstanceUID,
+      //   filters,
+      // })
+      dataSource.retrieve.series.metadata({
+        StudyInstanceUID,
+        filters,
+      })
+    );
+    allRetrieves.forEach(retrieve => {
+      retrieve.then(val => {
+        console.log('MyLog, RETRIEVE, filters allRetrieves', val);
+      });
     });
-  });
 
-  // The hanging protocol matching service is fairly expensive to run multiple
-  // times, and doesn't allow partial matches to be made (it will simply fail
-  // to display anything if a required match fails), so we wait here until all metadata
-  // is retrieved (which will synchronously trigger the display set creation)
-  // until we run the hanging protocol matching service.
+    // log the error if this fails, otherwise it's so difficult to tell what went wrong...
+    allRetrieves.forEach(retrieve => {
+      retrieve.catch(error => {
+        console.error(error);
+      });
+    });
+    // The hanging protocol matching service is fairly expensive to run multiple
+    // times, and doesn't allow partial matches to be made (it will simply fail
+    // to display anything if a required match fails), so we wait here until all metadata
+    // is retrieved (which will synchronously trigger the display set creation)
+    // until we run the hanging protocol matching service.
 
-  Promise.allSettled(allRetrieves).then(() => {
-    const displaySets = displaySetService.getActiveDisplaySets();
+    Promise.allSettled(allRetrieves).then(() => {
+      const displaySets = displaySetService.getActiveDisplaySets();
 
-    if (!displaySets || !displaySets.length) {
-      return;
-    }
+      if (!displaySets || !displaySets.length) {
+        return;
+      }
 
-    // Gets the studies list to use
-    const studies = getStudies(studyInstanceUIDs, displaySets);
+      // Gets the studies list to use
+      const studies = getStudies(studyInstanceUIDs, displaySets);
 
-    // study being displayed, and is thus the "active" study.
-    const activeStudy = studies[0];
+      // study being displayed, and is thus the "active" study.
+      const activeStudy = studies[0];
 
-    // run the hanging protocol matching on the displaySets with the predefined
-    // hanging protocol in the mode configuration
-    hangingProtocolService.run({ studies, activeStudy, displaySets }, hangingProtocolId);
-  });
+      // run the hanging protocol matching on the displaySets with the predefined
+      // hanging protocol in the mode configuration
+      hangingProtocolService.run({ studies, activeStudy, displaySets }, hangingProtocolId);
+    });
+  }
 
   return unsubscriptions;
 }
@@ -116,12 +130,14 @@ export default function ModeRoute({
 
   // The react router DOM placeholder map (see https://reactrouter.com/en/main/hooks/use-params).
   const params = useParams();
+
   // The URL's query search parameters where the keys casing is maintained
   const query = useSearchParams();
   // The URL's query search parameters where the keys are all lower case.
   const lowerCaseSearchParams = useSearchParams({ lowerCaseKeys: true });
 
   const [studyInstanceUIDs, setStudyInstanceUIDs] = useState();
+  const [patientId, setpatientId] = useState();
 
   const [refresh, setRefresh] = useState(false);
   const [ExtensionDependenciesLoaded, setExtensionDependenciesLoaded] = useState(false);
@@ -141,10 +157,37 @@ export default function ModeRoute({
   const { displaySetService, hangingProtocolService, userAuthenticationService } = (
     servicesManager as ServicesManager
   ).services;
+  console.log('MyLog, get HCP');
 
   const { extensions, sopClassHandlers, hotkeys: hotkeyObj, hangingProtocol } = mode;
 
   const runTimeHangingProtocolId = lowerCaseSearchParams.get('hangingprotocolid');
+
+  //MyTODO: HCP CHeck
+  const hcp = lowerCaseSearchParams.get('hcp');
+  if (hcp) {
+    // if a token is passed in, set the userAuthenticationService to use it
+    // for the Authorization header for all requests
+    userAuthenticationService.setServiceImplementation({
+      getAuthorizationHeader: () => ({
+        Authorization: appConfig.elgaSettings.TokenType + ' ' + hcp,
+      }),
+    });
+
+    //Create a URL object with the current location
+    const urlObj = new URL(window.location.origin + location.pathname + location.search);
+    if (appConfig.elgaSettings.RemoveTokenFromURLOnceLoadedIntoState) {
+      // Remove the token from the URL object
+      urlObj.searchParams.delete('hcp');
+      const cleanUrl = urlObj.toString();
+
+      // Update the browser's history without the token
+      if (window.history && window.history.replaceState) {
+        window.history.replaceState(null, '', cleanUrl);
+      }
+    }
+  }
+
   const token = lowerCaseSearchParams.get('token');
 
   if (token) {
@@ -182,7 +225,6 @@ export default function ModeRoute({
 
   // Only handling one route per mode for now
   const route = mode.routes[0];
-
   // For each extension, look up their context modules
   // TODO: move to extension manager.
   let contextModules = [];
@@ -212,6 +254,7 @@ export default function ModeRoute({
   useEffect(() => {
     const loadExtensions = async () => {
       const loadedExtensions = await loadModules(Object.keys(extensions));
+      console.log('MyLog-loadExtensions', loadedExtensions);
       for (const extension of loadedExtensions) {
         const { id: extensionId } = extension;
         if (extensionManager.registeredExtensionIds.indexOf(extensionId) === -1) {
@@ -220,7 +263,6 @@ export default function ModeRoute({
       }
       setExtensionDependenciesLoaded(true);
     };
-
     loadExtensions();
   }, []);
 
@@ -243,6 +285,8 @@ export default function ModeRoute({
         params,
         query,
       });
+      //MyTODO: Accession number here, creatae  a differnt one
+      setpatientId(dataSource.getPatientId({ params, query }));
       setStudyInstanceUIDs(dataSource.getStudyInstanceUIDs({ params, query }));
     };
 
@@ -252,29 +296,84 @@ export default function ModeRoute({
     };
   }, [location, ExtensionDependenciesLoaded]);
 
+  // useEffect(() => {
+  //   if (!ExtensionDependenciesLoaded) {
+  //     return;
+  //   }
+  //   console.log('MyLog - Mode useEffect', accessionNumberAndIssuer);
+
+  //   const retrieveLayoutData = async () => {
+  //     console.log(
+  //       'MyLog, retrieveLayoutData',
+  //       {
+  //         location,
+  //         servicesManager,
+  //         studyInstanceUIDs: accessionNumberAndIssuer,
+  //       },
+  //       route,
+  //       route.layoutTemplate
+  //     );
+  //     const layoutData = await route.layoutTemplate({
+  //       location,
+  //       servicesManager,
+  //       studyInstanceUIDs: accessionNumberAndIssuer,
+  //     });
+  //     if (isMounted.current) {
+  //       layoutTemplateData.current = layoutData;
+  //       setRefresh(!refresh);
+  //     }
+  //   };
+  //   //TODO Only if patientid is set send request
+  //   // if (PatientId) {
+  //     retrieveLayoutData();
+  //   // }
+  //   return () => {
+  //     layoutTemplateData.current = null;
+  //   };
+  // }, [accessionNumberAndIssuer, ExtensionDependenciesLoaded]);
+
   useEffect(() => {
     if (!ExtensionDependenciesLoaded) {
       return;
     }
 
     const retrieveLayoutData = async () => {
+      console.log(
+        'MyLog, retrieveLayoutData',
+        {
+          location,
+          servicesManager,
+          studyInstanceUIDs: studyInstanceUIDs,
+          patientId: patientId,
+        },
+        route,
+        route.layoutTemplate
+      );
       const layoutData = await route.layoutTemplate({
         location,
         servicesManager,
         studyInstanceUIDs,
+        patientId,
       });
       if (isMounted.current) {
         layoutTemplateData.current = layoutData;
         setRefresh(!refresh);
       }
+      console.log('MyLog, StudyInstanceUID', patientId, route);
     };
-    if (studyInstanceUIDs?.length && studyInstanceUIDs[0] !== undefined) {
+
+    if (
+      studyInstanceUIDs?.length > 0 &&
+      studyInstanceUIDs[0] !== undefined &&
+      studyInstanceUIDs[0].length > 0 &&
+      patientId?.length > 0
+    ) {
       retrieveLayoutData();
     }
     return () => {
       layoutTemplateData.current = null;
     };
-  }, [studyInstanceUIDs, ExtensionDependenciesLoaded]);
+  }, [studyInstanceUIDs, patientId, ExtensionDependenciesLoaded]);
 
   useEffect(() => {
     if (!hotkeys || !ExtensionDependenciesLoaded) {
@@ -348,13 +447,16 @@ export default function ModeRoute({
        *   seriesInstanceUID: 1.2.276.0.7230010.3.1.3.1791068887.5412.1620253993.114611
        * }
        */
+      console.log('MyLog, Mode, filters', Array.from(query.keys()));
       const filters =
         Array.from(query.keys()).reduce((acc: Record<string, string>, val: string) => {
+          console.log('MyLog, Mode, infilters', acc);
           const lowerVal = val.toLowerCase();
           if (lowerVal !== 'studyinstanceuids') {
             // Not sure why the case matters here - it doesn't in the URL
             if (lowerVal === 'seriesinstanceuid') {
               const seriesUIDs = getSplitParam(lowerVal, query);
+
               return {
                 ...acc,
                 seriesInstanceUID: seriesUIDs,
@@ -364,14 +466,19 @@ export default function ModeRoute({
             return { ...acc, [val]: getSplitParam(lowerVal, query) };
           }
         }, {}) ?? {};
-
-      if (route.init) {
+      // if () {
+      //   return <>patientid filter found!</>;
+      // }
+      console.log('MyLog, Mode, filters', Object.keys(filters).indexOf('PatientID'), filters);
+      if (route.init && Object.keys(filters).indexOf('PatientID') >= 0) {
+        console.log('MyLog, Mode, route init', route);
         return await route.init(
           {
             servicesManager,
             extensionManager,
             hotkeysManager,
             studyInstanceUIDs,
+            patientId,
             dataSource,
             filters,
           },
@@ -383,6 +490,7 @@ export default function ModeRoute({
         {
           servicesManager,
           studyInstanceUIDs,
+          patientId,
           dataSource,
           filters,
         },
@@ -438,11 +546,18 @@ export default function ModeRoute({
 
     return <LayoutComponent {...props} />;
   };
-
+  // if (filter.indexOf('00100020') > 0) {
+  //   return <>patientid filter found!</>;
+  // }
+  // if (filter && filter.indexOf('00100020') < 0) {
+  //   return <>patientid filter NOT found!</>;
+  // }
+  console.log('MyLog, Mode, patientId', patientId);
   return (
     <ImageViewerProvider
       // initialState={{ StudyInstanceUIDs: StudyInstanceUIDs }}
       StudyInstanceUIDs={studyInstanceUIDs}
+      PatientID={patientId}
     // reducer={reducer}
     >
       <CombinedContextProvider>

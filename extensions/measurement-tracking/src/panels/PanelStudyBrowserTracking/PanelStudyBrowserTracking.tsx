@@ -28,7 +28,11 @@ function PanelStudyBrowserTracking({
   // Normally you nest the components so the tree isn't so deep, and the data
   // doesn't have to have such an intense shape. This works well enough for now.
   // Tabs --> Studies --> DisplaySets --> Thumbnails
-  const { StudyInstanceUIDs } = useImageViewer();
+  console.log('MyLog, PanelStudyBrowserTracking');
+  const { StudyInstanceUIDs, PatientID } = useImageViewer();
+  if (PatientID <= 0) {
+    return null;
+  }
   const [{ activeViewportId, viewports }, viewportGridService] = useViewportGrid();
   const [trackedMeasurements, sendTrackedMeasurementsEvent] = useTrackedMeasurements();
   const [activeTabName, setActiveTabName] = useState('primary');
@@ -72,24 +76,35 @@ function PanelStudyBrowserTracking({
     // Fetch all studies for the patient in each primary study
     async function fetchStudiesForPatient(StudyInstanceUID) {
       // current study qido
+      console.log('MyLog,  CallPanelStudyBrowsertracking', StudyInstanceUID, PatientID, dataSource);
       const qidoForStudyUID = await dataSource.query.studies.search({
         studyInstanceUid: StudyInstanceUID,
+        patientId: PatientID,
       });
+
+      console.log(
+        'MyLog,  CallPanelStudyBrowsertracking - query Done',
+        qidoForStudyUID,
+        StudyInstanceUID,
+        PatientID,
+        dataSource.query.studies.search
+      );
 
       if (!qidoForStudyUID?.length) {
         navigate('/notfoundstudy', '_self');
         throw new Error('Invalid study URL');
       }
 
-      let qidoStudiesForPatient = qidoForStudyUID;
+      const qidoStudiesForPatient = qidoForStudyUID;
 
       // try to fetch the prior studies based on the patientID if the
       // server can respond.
-      try {
-        qidoStudiesForPatient = await getStudiesForPatientByMRN(qidoForStudyUID);
-      } catch (error) {
-        console.warn(error);
-      }
+      //TODO: make it configurable
+      // try {
+      //   qidoStudiesForPatient = await getStudiesForPatientByMRN(qidoForStudyUID);
+      // } catch (error) {
+      //   console.warn(error);
+      // }
 
       const mappedStudies = _mapDataSourceStudies(qidoStudiesForPatient);
       const actuallyMappedStudies = mappedStudies.map(qidoStudy => {
@@ -99,6 +114,7 @@ function PanelStudyBrowserTracking({
           description: qidoStudy.StudyDescription,
           modalities: qidoStudy.ModalitiesInStudy,
           numInstances: qidoStudy.NumInstances,
+          retrieveURL: qidoStudy.retrieveURL,
         };
       });
 
@@ -115,7 +131,7 @@ function PanelStudyBrowserTracking({
 
     StudyInstanceUIDs.forEach(sid => fetchStudiesForPatient(sid));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [StudyInstanceUIDs, getStudiesForPatientByMRN]);
+  }, [StudyInstanceUIDs, PatientID, getStudiesForPatientByMRN]);
 
   // ~~ Initial Thumbnails
   useEffect(() => {
@@ -330,7 +346,7 @@ function PanelStudyBrowserTracking({
           SeriesInstanceUID: displaySet.SeriesInstanceUID,
         });
       }}
-      onClickThumbnail={() => {}}
+      onClickThumbnail={() => { }}
       onDoubleClickThumbnail={onDoubleClickThumbnailHandler}
       activeDisplaySetInstanceUIDs={activeViewportDisplaySetInstanceUIDs}
     />
@@ -363,10 +379,11 @@ function _mapDataSourceStudies(studies) {
       StudyDescription: study.description,
       NumInstances: study.instances,
       ModalitiesInStudy: study.modalities,
-      PatientID: study.mrn,
+      PatientID: study.patientId,
       PatientName: study.patientName,
       StudyInstanceUID: study.studyInstanceUid,
       StudyTime: study.time,
+      RetrieveURL: study.retrieveURL,
     };
   });
 }
@@ -590,16 +607,16 @@ function _createStudyBrowserTabs(
       label: 'Primary',
       studies: primaryStudies.sort((studyA, studyB) => _byDate(studyA.date, studyB.date)),
     },
-    {
-      name: 'recent',
-      label: 'Recent',
-      studies: recentStudies.sort((studyA, studyB) => _byDate(studyA.date, studyB.date)),
-    },
-    {
-      name: 'all',
-      label: 'All',
-      studies: allStudies.sort((studyA, studyB) => _byDate(studyA.date, studyB.date)),
-    },
+    // {
+    //   name: 'recent',
+    //   label: 'Recent',
+    //   studies: recentStudies.sort((studyA, studyB) => _byDate(studyA.date, studyB.date)),
+    // },
+    // {
+    //   name: 'all',
+    //   label: 'All',
+    //   studies: allStudies.sort((studyA, studyB) => _byDate(studyA.date, studyB.date)),
+    // },
   ];
 
   return tabs;

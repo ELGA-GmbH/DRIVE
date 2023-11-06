@@ -23,6 +23,7 @@ function create({
   getImageIdsForInstance,
   getConfig,
   getStudyInstanceUIDs,
+  getPatientId,
 }) {
   const defaultQuery = {
     studies: {
@@ -75,6 +76,7 @@ function create({
     getImageIdsForInstance,
     getConfig: getConfig || defaultGetConfig,
     getStudyInstanceUIDs: getStudyInstanceUIDs,
+    getPatientId: getPatientId,
   };
 }
 

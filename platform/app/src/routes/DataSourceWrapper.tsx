@@ -145,10 +145,23 @@ function DataSourceWrapper(props) {
     }
 
     const queryFilterValues = _getQueryFilterValues(location.search, STUDIES_LIMIT);
+    console.log('Mylog, getData queryFilterValues', queryFilterValues);
 
     // 204: no content
     async function getData() {
       setIsLoading(true);
+
+      const hcp = lowerCaseSearchParams.get('hcp');
+      console.log('Mylog, getData', extensionManager, hcp);
+      if (hcp) {
+        // if a token is passed in, set the userAuthenticationService to use it
+        console.log(
+          'datasourceWrapper getData queryFilterValues',
+          location.search,
+          dataSource,
+          queryFilterValues
+        );
+      }
 
       const studies = await dataSource.query.studies.search(queryFilterValues);
 
@@ -230,6 +243,7 @@ export default DataSourceWrapper;
  * @param {*} query
  */
 function _getQueryFilterValues(query, queryLimit) {
+  console.log('MyLog, _getQueryFilterValues', query);
   query = new URLSearchParams(query);
 
   const pageNumber = _tryParseInt(query.get('pageNumber'), 1);
@@ -237,12 +251,14 @@ function _getQueryFilterValues(query, queryLimit) {
 
   const queryFilterValues = {
     // DCM
-    patientId: query.get('mrn'),
+    patientId: query.get('patientId'),
+    issuerOfPatientId: query.get('issuerOfPatientId'),
+    //TODO: Add hcp?
     patientName: query.get('patientName'),
     studyDescription: query.get('description'),
     modalitiesInStudy: query.get('modalities') && query.get('modalities').split(','),
     accessionNumber: query.get('accession'),
-    //
+    issuerOfAccessionNumber: query.get('issuerOfAccessionNumber'),
     startDate: query.get('startDate'),
     endDate: query.get('endDate'),
     page: _tryParseInt(query.get('page'), undefined),
@@ -254,7 +270,14 @@ function _getQueryFilterValues(query, queryLimit) {
     // Offset...
     offset: Math.floor((pageNumber * resultsPerPage) / queryLimit) * (queryLimit - 1),
     config: query.get('configUrl'),
+    // hcp: query.get('hcp'),
   };
+  console.log(
+    'MyLog, _getQueryFilterValues DataSourceWrapper',
+    query.get('issuerofaccession'),
+    query,
+    queryFilterValues
+  );
 
   // patientName: good
   // studyDescription: good

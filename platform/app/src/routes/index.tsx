@@ -12,6 +12,7 @@ import buildModeRoutes from './buildModeRoutes';
 import PrivateRoute from './PrivateRoute';
 import PropTypes from 'prop-types';
 import { Link } from 'react-router-dom';
+import ELGASelector from './ELGASelector';
 
 const NotFoundServer = ({
   message = 'Unable to query for studies at this time. Check your data source configuration or network connection',
@@ -23,6 +24,42 @@ const NotFoundServer = ({
       </div>
     </div>
   );
+};
+const OnlyWithParamsWrapper = props => {
+  const params = new URLSearchParams(location.search.toLowerCase());
+  const patientId = params.get('patientid');
+  const issuerofpatientId = params.get('issuerofpatientid');
+  const hcp = params.get('hcp');
+
+  // Params are present, render your component or perform necessary actions
+  const ErrorMessages = [];
+  if (patientId == null || patientId == '') {
+    ErrorMessages.push(<>Bitte PatientId angeben!</>);
+  }
+  if (issuerofpatientId == null || issuerofpatientId == '') {
+    ErrorMessages.push(<>Bitte IssuerOfPatientId angegeben!</>);
+  }
+  if (hcp == null || hcp == '') {
+    ErrorMessages.push(<>Bitte HCP-Token angegeben!</>);
+  }
+  console.log('ErrorMessages', ErrorMessages);
+  if (ErrorMessages.length > 0) {
+    return (
+      <div className="absolute flex h-full w-full items-center justify-center text-white">
+        <div>
+          <h2>
+            <b>Konnte keine Daten laden:</b>
+          </h2>
+          <ul style={{ marginTop: '15px' }}>
+            {ErrorMessages.map(x => (
+              <li>{x}</li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    );
+  }
+  return DataSourceWrapper(props);
 };
 
 NotFoundServer.propTypes = {
@@ -99,8 +136,24 @@ const createRoutes = ({
       hotkeysManager,
     }) || [];
 
+  // return (
+  //   <>
+  //     <Routes>
+  //       <Route path="/">
+  //         <div style={{ backgroundColor: 'white' }}>asdasdasd</div>
+  //       </Route>
+  //     </Routes>
+  //     asdasd
+  //   </>
+  // );
   const { customizationService } = servicesManager.services;
 
+  const ELGAWorkListRoute = {
+    path: '/',
+    children: OnlyWithParamsWrapper,
+    private: true,
+    props: { children: ELGASelector, servicesManager, extensionManager },
+  };
   const WorkListRoute = {
     path: '/',
     children: DataSourceWrapper,
@@ -109,14 +162,15 @@ const createRoutes = ({
   };
 
   const customRoutes = customizationService.getGlobalCustomization('customRoutes');
+  console.log('MyLog, customRoutes', DataSourceWrapper);
   const allRoutes = [
     ...routes,
-    ...(showStudyList ? [WorkListRoute] : []),
+    ...(showStudyList ? [ELGAWorkListRoute] : []),
     ...(customRoutes?.routes || []),
     ...bakedInRoutes,
     customRoutes?.notFoundRoute || notFoundRoute,
   ];
-
+  console.log('allRoutes', allRoutes);
   function RouteWithErrorBoundary({ route, ...rest }) {
     // eslint-disable-next-line react/jsx-props-no-spreading
     return (

@@ -25,6 +25,8 @@ function buildInstanceWadoUrl(config, instance) {
  * @returns {string} The imageId to be used by Cornerstone
  */
 export default function getImageId({ instance, frame, config, thumbnail = false }) {
+  console.log('MyLog, getImageId', instance);
+
   if (!instance) {
     return;
   }
@@ -32,7 +34,6 @@ export default function getImageId({ instance, frame, config, thumbnail = false 
   if (instance.url) {
     return instance.url;
   }
-
   const renderingAttr = thumbnail ? 'thumbnailRendering' : 'imageRendering';
 
   if (!config[renderingAttr] || config[renderingAttr] === 'wadouri') {
@@ -45,6 +46,12 @@ export default function getImageId({ instance, frame, config, thumbnail = false 
 
     return imageId;
   } else {
+    if (instance.PixelData?.BulkDataURI) {
+      frame = frame || 1;
+      console.log('MyLog, getImageId', `${instance.PixelData?.BulkDataURI}/frames/${frame}`);
+      return `wadors:${instance.PixelData?.BulkDataURI}/frames/${frame}`;
+    }
+    console.log('MyLog, getImageId,getWADORSImageId', instance);
     return getWADORSImageId(instance, config, frame); // WADO-RS Retrieve Frame
   }
 }

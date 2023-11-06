@@ -1,0 +1,43 @@
+swagger: '2.0'
+info:
+  version: '1.0.0'
+  title: 'Open ELGA-OHIF'
+paths:
+  /:
+    get:
+      summary: 'Open ELGA-OHIF'
+      description: 'Endpoint Open ELGA-OHIF'
+      parameters:
+        - name: 'hcp'
+          in: 'query'
+          description: 'Base64 encoded HCP-Token'
+          required: true
+          type: 'string'
+        - name: 'issuerOfPatientId'
+          in: 'query'
+          description: 'Issuer of the PatientId'
+          required: true
+          type: 'string'
+        - name: 'patientId'
+          in: 'query'
+          description: 'PatientId - typically the SSN'
+          required: true
+          type: 'string'
+        - name: 'accession'
+          in: 'query'
+          description:
+            'Optional Accession Number, if this is set, the issuerOfAccessionNumber rarameter is
+            required!'
+          required: false
+          type: 'string'
+        - name: 'issuerOfAccessionNumber'
+          in: 'query'
+          description: 'Query parameter'
+          required: false
+          type: 'string'
+      responses:
+        200:
+          description: 'Success'
+          schema:
+            type: 'string'
+            format: 'html'
