@@ -15,7 +15,7 @@ Before the service startup serveral things need to be configured:
 2) you might have to change the docker-compose file so it uses the correct ports
 3) you might want to add a logo
 
-For a more detailed description please refere to the instructions under: https://hub.docker.com/r/elgagmbh/elga-ohif3
+For a more detailed description please refere to the instructions under: https://hub.docker.com/r/elgagmbh/drive
 
 # Changes & Technical Description
 
