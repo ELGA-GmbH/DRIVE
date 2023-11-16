@@ -138,6 +138,7 @@ export default function ModeRoute({
 
   const [studyInstanceUIDs, setStudyInstanceUIDs] = useState();
   const [patientId, setpatientId] = useState();
+  const [issuerOfPatientId, setissuerOfPatientId] = useState();
 
   const [refresh, setRefresh] = useState(false);
   const [ExtensionDependenciesLoaded, setExtensionDependenciesLoaded] = useState(false);
@@ -287,6 +288,7 @@ export default function ModeRoute({
       });
       //MyTODO: Accession number here, creatae  a differnt one
       setpatientId(dataSource.getPatientId({ params, query }));
+      setissuerOfPatientId(dataSource.getIssuerOfPatientId({ params, query }));
       setStudyInstanceUIDs(dataSource.getStudyInstanceUIDs({ params, query }));
     };
 
@@ -345,6 +347,7 @@ export default function ModeRoute({
           servicesManager,
           studyInstanceUIDs: studyInstanceUIDs,
           patientId: patientId,
+          issuerOfPatientId: issuerOfPatientId,
         },
         route,
         route.layoutTemplate
@@ -354,26 +357,28 @@ export default function ModeRoute({
         servicesManager,
         studyInstanceUIDs,
         patientId,
+        issuerOfPatientId: issuerOfPatientId,
       });
       if (isMounted.current) {
         layoutTemplateData.current = layoutData;
         setRefresh(!refresh);
       }
-      console.log('MyLog, StudyInstanceUID', patientId, route);
+      console.log('MyLog, StudyInstanceUID', patientId, issuerOfPatientId, route);
     };
 
     if (
       studyInstanceUIDs?.length > 0 &&
       studyInstanceUIDs[0] !== undefined &&
       studyInstanceUIDs[0].length > 0 &&
-      patientId?.length > 0
+      patientId?.length > 0 &&
+      issuerOfPatientId?.length > 0
     ) {
       retrieveLayoutData();
     }
     return () => {
       layoutTemplateData.current = null;
     };
-  }, [studyInstanceUIDs, patientId, ExtensionDependenciesLoaded]);
+  }, [studyInstanceUIDs, patientId, issuerOfPatientId, ExtensionDependenciesLoaded]);
 
   useEffect(() => {
     if (!hotkeys || !ExtensionDependenciesLoaded) {
@@ -470,7 +475,11 @@ export default function ModeRoute({
       //   return <>patientid filter found!</>;
       // }
       console.log('MyLog, Mode, filters', Object.keys(filters).indexOf('PatientID'), filters);
-      if (route.init && Object.keys(filters).indexOf('PatientID') >= 0) {
+      if (
+        route.init &&
+        Object.keys(filters).indexOf('PatientID') >= 0 &&
+        Object.keys(filters).indexOf('IssuerOfPatientId') >= 0
+      ) {
         console.log('MyLog, Mode, route init', route);
         return await route.init(
           {
@@ -479,6 +488,7 @@ export default function ModeRoute({
             hotkeysManager,
             studyInstanceUIDs,
             patientId,
+            issuerOfPatientId,
             dataSource,
             filters,
           },
@@ -491,6 +501,7 @@ export default function ModeRoute({
           servicesManager,
           studyInstanceUIDs,
           patientId,
+          issuerOfPatientId,
           dataSource,
           filters,
         },
@@ -558,6 +569,7 @@ export default function ModeRoute({
       // initialState={{ StudyInstanceUIDs: StudyInstanceUIDs }}
       StudyInstanceUIDs={studyInstanceUIDs}
       PatientID={patientId}
+      IssuerOfPatientId={issuerOfPatientId}
     // reducer={reducer}
     >
       <CombinedContextProvider>

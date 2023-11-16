@@ -29,8 +29,8 @@ function PanelStudyBrowserTracking({
   // doesn't have to have such an intense shape. This works well enough for now.
   // Tabs --> Studies --> DisplaySets --> Thumbnails
   console.log('MyLog, PanelStudyBrowserTracking');
-  const { StudyInstanceUIDs, PatientID } = useImageViewer();
-  if (PatientID <= 0) {
+  const { StudyInstanceUIDs, PatientID, IssuerOfPatientId } = useImageViewer();
+  if (PatientID <= 0 || IssuerOfPatientId?.length < 1) {
     return null;
   }
   const [{ activeViewportId, viewports }, viewportGridService] = useViewportGrid();
@@ -76,10 +76,17 @@ function PanelStudyBrowserTracking({
     // Fetch all studies for the patient in each primary study
     async function fetchStudiesForPatient(StudyInstanceUID) {
       // current study qido
-      console.log('MyLog,  CallPanelStudyBrowsertracking', StudyInstanceUID, PatientID, dataSource);
+      console.log(
+        'MyLog,  CallPanelStudyBrowsertracking',
+        StudyInstanceUID,
+        PatientID,
+        IssuerOfPatientId,
+        dataSource
+      );
       const qidoForStudyUID = await dataSource.query.studies.search({
         studyInstanceUid: StudyInstanceUID,
         patientId: PatientID,
+        issuerOfPatientId: IssuerOfPatientId,
       });
 
       console.log(

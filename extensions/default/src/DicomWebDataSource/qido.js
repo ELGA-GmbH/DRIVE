@@ -170,7 +170,7 @@ function mapParams(params, options = {}) {
   }
   const commaSeparatedFields = [
     '00081030', // Study Description
-    '00080060', // Modality
+    '00080061', // Modality
     '00081190',
     // Add more fields here if you want them in the result
   ].join(',');

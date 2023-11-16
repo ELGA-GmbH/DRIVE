@@ -24,6 +24,7 @@ function create({
   getConfig,
   getStudyInstanceUIDs,
   getPatientId,
+  getIssuerOfPatientId,
 }) {
   const defaultQuery = {
     studies: {
@@ -77,6 +78,7 @@ function create({
     getConfig: getConfig || defaultGetConfig,
     getStudyInstanceUIDs: getStudyInstanceUIDs,
     getPatientId: getPatientId,
+    getIssuerOfPatientId: getIssuerOfPatientId,
   };
 }
 

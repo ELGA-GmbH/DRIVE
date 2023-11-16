@@ -136,7 +136,6 @@ function createDicomWebApi(dicomWebConfig, userAuthenticationService) {
 
           const proc = processResults(results);
           console.log('MyLog Search query results', proc);
-
           wadoConfig.url = proc.map(x => x.retrieveURL.replace(/studies\/[0-9\.]{1,}.*/gm, ''))[0];
           return proc;
         },
@@ -154,7 +153,9 @@ function createDicomWebApi(dicomWebConfig, userAuthenticationService) {
               supportsWildcard: dicomWebConfig.supportsWildcard,
             }) || {};
           const results = await seriesInStudy(qidoDicomWebClient, studyInstanceUid);
-
+          const proc = processResults(results);
+          console.log('MyLog, ', proc, results);
+          wadoConfig.url = proc.map(x => x.retrieveURL.replace(/studies\/[0-9\.]{1,}.*/gm, ''))[0];
           return processSeriesResults(results);
         },
         // processResults: processResults.bind(),
@@ -534,6 +535,16 @@ function createDicomWebApi(dicomWebConfig, userAuthenticationService) {
         console.log('MyLog', query);
         const PatientId = query.getAll('PatientID');
         return PatientId;
+      } catch (ex) {
+        console.error('MyLog', ex);
+      }
+      return null;
+    },
+    getIssuerOfPatientId({ query }) {
+      try {
+        console.log('MyLog', query);
+        const IssuerOfPatientId = query.getAll('IssuerOfPatientId');
+        return IssuerOfPatientId;
       } catch (ex) {
         console.error('MyLog', ex);
       }

@@ -63,8 +63,18 @@ function createDicomWebProxyApi(dicomWebProxyConfig, UserAuthenticationService) 
     getPatientId({ query }) {
       try {
         console.log('MyLog,getPatientId', query);
-        const AccessionNumber = query.getAll('AccessionNumber');
+        const AccessionNumber = query.getAll('PatientId');
         return AccessionNumber;
+      } catch (ex) {
+        console.log('MyLog', ex);
+      }
+      return null;
+    },
+    getIssuerOfPatientId({ query }) {
+      try {
+        console.log('MyLog,IssuerOfPatientId', query);
+        const IssuerOfPatientId = query.getAll('IssuerOfPatientId');
+        return IssuerOfPatientId;
       } catch (ex) {
         console.log('MyLog', ex);
       }
