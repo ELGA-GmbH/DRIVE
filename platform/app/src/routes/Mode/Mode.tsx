@@ -569,7 +569,7 @@ export default function ModeRoute({
       // initialState={{ StudyInstanceUIDs: StudyInstanceUIDs }}
       StudyInstanceUIDs={studyInstanceUIDs}
       PatientID={patientId}
-      IssuerOfPatientId={issuerOfPatientId}
+      IssuerOfPatientID={issuerOfPatientId}
     // reducer={reducer}
     >
       <CombinedContextProvider>

@@ -10,7 +10,7 @@ export const ImageViewerContext = createContext();
 export function ImageViewerProvider({
   StudyInstanceUIDs,
   PatientID,
-  IssuerOfPatientId,
+  IssuerOfPatientID,
   reducer,
   initialState,
   children,
@@ -21,12 +21,12 @@ export function ImageViewerProvider({
       'MyLog, ImageViewerProvider inside Memo',
       StudyInstanceUIDs,
       PatientID,
-      IssuerOfPatientId
+      IssuerOfPatientID
     );
-    if (PatientID != null && IssuerOfPatientId) {
-      return { StudyInstanceUIDs, PatientID, IssuerOfPatientId };
+    if (PatientID != null && IssuerOfPatientID) {
+      return { StudyInstanceUIDs, PatientID, IssuerOfPatientID };
     }
-  }, [StudyInstanceUIDs, PatientID, IssuerOfPatientId]);
+  }, [StudyInstanceUIDs, PatientID, IssuerOfPatientID]);
 
   return <ImageViewerContext.Provider value={value}>{children}</ImageViewerContext.Provider>;
 }

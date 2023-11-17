@@ -29,8 +29,8 @@ function PanelStudyBrowserTracking({
   // doesn't have to have such an intense shape. This works well enough for now.
   // Tabs --> Studies --> DisplaySets --> Thumbnails
   console.log('MyLog, PanelStudyBrowserTracking');
-  const { StudyInstanceUIDs, PatientID, IssuerOfPatientId } = useImageViewer();
-  if (PatientID <= 0 || IssuerOfPatientId?.length < 1) {
+  const { StudyInstanceUIDs, PatientID, IssuerOfPatientID } = useImageViewer();
+  if (PatientID <= 0 || IssuerOfPatientID?.length < 1) {
     return null;
   }
   const [{ activeViewportId, viewports }, viewportGridService] = useViewportGrid();
@@ -80,13 +80,13 @@ function PanelStudyBrowserTracking({
         'MyLog,  CallPanelStudyBrowsertracking',
         StudyInstanceUID,
         PatientID,
-        IssuerOfPatientId,
+        IssuerOfPatientID,
         dataSource
       );
       const qidoForStudyUID = await dataSource.query.studies.search({
         studyInstanceUid: StudyInstanceUID,
         patientId: PatientID,
-        issuerOfPatientId: IssuerOfPatientId,
+        issuerOfPatientId: IssuerOfPatientID,
       });
 
       console.log(
@@ -138,7 +138,7 @@ function PanelStudyBrowserTracking({
 
     StudyInstanceUIDs.forEach(sid => fetchStudiesForPatient(sid));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [StudyInstanceUIDs, PatientID, getStudiesForPatientByMRN]);
+  }, [StudyInstanceUIDs, PatientID, IssuerOfPatientID, getStudiesForPatientByMRN]);
 
   // ~~ Initial Thumbnails
   useEffect(() => {
@@ -387,6 +387,7 @@ function _mapDataSourceStudies(studies) {
       NumInstances: study.instances,
       ModalitiesInStudy: study.modalities,
       PatientID: study.patientId,
+      IssuerOfPatientID: study.issuerOfPatientId,
       PatientName: study.patientName,
       StudyInstanceUID: study.studyInstanceUid,
       StudyTime: study.time,

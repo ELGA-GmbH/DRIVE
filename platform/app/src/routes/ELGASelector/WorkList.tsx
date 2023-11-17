@@ -443,7 +443,7 @@ function ELGASelector({
         }
         query.append('StudyInstanceUIDs', studyInstanceUid);
         query.append('PatientID', patientid);
-        query.append('IssuerOfPatientId', issuerofpatientid);
+        query.append('IssuerOfPatientID', issuerofpatientid);
         query.append('hcp', hcp);
 
         const modalitiesToCheck = modalities.replaceAll('/', '\\');
@@ -476,7 +476,7 @@ function ELGASelector({
     }
     query.append('StudyInstanceUIDs', studyInstanceUid);
     query.append('PatientID', patientid);
-    query.append('IssuerOfPatientId', issuerofpatientid);
+    query.append('IssuerOfPatientID', issuerofpatientid);
     query.append('hcp', hcp);
 
     const modalitiesToCheck = modalities.replaceAll('/', '\\');

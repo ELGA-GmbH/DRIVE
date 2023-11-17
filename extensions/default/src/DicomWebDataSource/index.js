@@ -543,7 +543,7 @@ function createDicomWebApi(dicomWebConfig, userAuthenticationService) {
     getIssuerOfPatientId({ query }) {
       try {
         console.log('MyLog', query);
-        const IssuerOfPatientId = query.getAll('IssuerOfPatientId');
+        const IssuerOfPatientId = query.getAll('IssuerOfPatientID');
         return IssuerOfPatientId;
       } catch (ex) {
         console.error('MyLog', ex);
