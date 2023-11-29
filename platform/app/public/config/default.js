@@ -20,7 +20,7 @@ window.config = {
         name: 'DCM4CHEE',
         // wadoUriRoot: 'http://192.168.102.141:8080/dcm4chee-arc/aets/DCM4CHEE/wado',
         // qidoRoot: 'http://192.168.102.141:8080/dcm4chee-arc/aets/DCM4CHEE/rs',
-        qidoRoot: '/dcmweb/qido/',
+        qidoRoot: '/dcmweb/qido',
         //wadoRoot: 'http://192.168.102.141:8080/dcm4chee-arc/aets/DCM4CHEE/rs',
         wadoRoot: '/dcmweb/dicom-web/wado',
         qidoSupportsIncludeField: true,

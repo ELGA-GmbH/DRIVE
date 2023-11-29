@@ -66,11 +66,7 @@ function defaultRouteInit(
     console.log('MyLog, RETRIEVE, filters', Object.keys(filters));
 
     const allRetrieves = studyInstanceUIDs.map(StudyInstanceUID =>
-      // dataSource.query.series.search({
-      //   StudyInstanceUID,
-      //   filters,
-      // })
-      dataSource.retrieve.series.metadata({
+      dataSource.query.instances.get({
         StudyInstanceUID,
         filters,
       })
