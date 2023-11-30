@@ -514,17 +514,27 @@ function createDicomWebApi(dicomWebConfig, userAuthenticationService) {
           const wadoMetadata = await Promise.all(
             naturalizedQuidoInstances.map(async x => {
               try {
-                const y = await wadoDicomWebClient.retrieveInstanceMetadata({
-                  studyInstanceUID: x.StudyInstanceUID,
-                  seriesInstanceUID: x.SeriesInstanceUID,
-                  sopInstanceUID: x.SOPInstanceUID,
-                });
-                console.log('metadataPromiseDone');
-                const naturalizedWadoMetadata = y.map(e => addRetrieveBulkData(e));
-                if (naturalizedWadoMetadata.length === 1) {
-                  FullMetadataList.push(naturalizedWadoMetadata[0]);
+                const regex = new RegExp(
+                  /studies\/(?<StudyInstanceUID>.*?)\/series\/(?<SeriesInstanceUID>.*?)\/instances/,
+                  'gm'
+                );
+                console.log('wadoMetadata', x.RetrieveURL, regex);
+                const urlMatches = regex.exec(x.RetrieveURL);
+                console.log('wadoMetadata', urlMatches.groups);
+                if (urlMatches?.groups != null) {
+                  const y = await wadoDicomWebClient.retrieveInstanceMetadata({
+                    studyInstanceUID: urlMatches?.groups?.StudyInstanceUID,
+                    seriesInstanceUID: urlMatches?.groups?.SeriesInstanceUID,
+                    sopInstanceUID: x.SOPInstanceUID,
+                  });
+                  console.log('metadataPromiseDone');
+                  const naturalizedWadoMetadata = y.map(e => addRetrieveBulkData(e));
+                  if (naturalizedWadoMetadata.length === 1) {
+                    FullMetadataList.push(naturalizedWadoMetadata[0]);
+                  }
+                  return y;
                 }
-                return y;
+                return null;
               } catch (ex) {
                 console.error('Error', ex);
                 return null;
